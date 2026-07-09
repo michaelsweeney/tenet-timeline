@@ -93,20 +93,19 @@ No webfonts; the file is self-contained.
     "segments": [{
       "id": "tp-fwd-chase",
       "lane": 0,                    // vertical sub-lane within the track row
-      "direction": "forward",       // forward | inverted | static (zones/objects at rest)
-      "world":  { "start": 20, "end": 60 },   // objective interval occupied
-      "viewer": [ { "start": 10, "end": 65 } ],// 0..n on-screen windows in movie order
-      "offCameraInViewer": false,   // true → ghosted when mode = viewer
+      "direction": "forward",       // forward | inverted | static | turnstile
+      "world":  [20, 60],           // objective interval occupied [start, end]
+      "viewer": [[10, 65]],         // 0..n on-screen windows in movie order
+      "reconstructed": false,       // true → never on camera: hidden in viewer
+                                    //   mode, ghosted (dashed) in world mode
       "location": "Tallinn highway",
       "label": "Forward chase",
-      "spoilerLabel": null,         // replaces label when spoilers ON (identity reveals)
-      "safeLabel": null,            // replaces label when spoilers OFF
-      "notes": "…"
+      "safeLabel": null             // shown instead of label when spoilers are OFF
     }],
-    "connectors": [{                // turnstile U-turns, drawn as curves
+    "connectors": [{                // direction-change curves
       "atWorld": 60, "atViewer": 68,
-      "fromSegment": "tp-fwd-chase", "toSegment": "tp-inv-return",
-      "kind": "turnstile"
+      "from": "tp-fwd-chase", "to": "tp-inv-return",
+      "kind": "turnstile"           // turnstile (violet) | handoff (amber, objects)
     }]
   }],
 
@@ -117,10 +116,10 @@ No webfonts; the file is self-contained.
     "title": "…",
     "location": "Tallinn highway",
     "present": ["protagonist", "neil"],
-    "inverted": ["sator"],          // subset of present
-    "viewerKnows": "…",             // first-viewing understanding (always shown)
-    "actuallyHappening": "…",       // spoiler-gated ground truth
-    "interpretation": "…"           // ambiguity / fan-reconstruction caveats (optional)
+    "inverted": ["sator"],          // who at this event is inverted
+    "knows": "…",                   // first-viewing understanding (always shown)
+    "actual": "…",                  // spoiler-gated ground truth
+    "interp": "…"                   // ambiguity / fan-reconstruction caveats (or null)
   }]
 }
 ```
@@ -129,8 +128,9 @@ Why segments carry **both** coordinate systems: mode switching must remap, not
 reload — and viewer windows are genuinely not a permutation of world time (the same
 world interval is on screen twice: once in the forward pass, once in the inverted
 pass), so a single `viewerOrder` scalar can't express it. `viewer` is therefore a
-*list* of windows, and a segment with an empty list plus `offCameraInViewer: true`
-renders ghosted in viewer mode: it exists in the world but the camera never shows it.
+*list* of windows, and a segment with an empty list plus `reconstructed: true` is
+hidden in viewer mode (the camera never shows it) and drawn ghosted/dashed in world
+mode (it exists in the world, but only as reconstruction).
 
 ## What is interpretive / uncertain
 
