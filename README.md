@@ -164,6 +164,34 @@ is given; the BMW-glove-box answer is a lie shouted at *forward* Sator; Sator se
 the Saab fire himself). Where the named sources become reachable, reconcile against
 them — they are the intended interpretive frame.
 
+## Scene view — the 2.5D diorama
+
+Above the track sheet sits an isometric diorama (toggle: SCENE): highway strip,
+freeport warehouse cut open into red room / turnstile / blue room, dock with the
+Oslo container, the wreck site on the median. Entities are basic assets — extruded
+boxes for vehicles, pin markers for characters, a floating amber diamond for the
+241 — colored by temporal direction like the tracks. Layout is approximate and
+deliberately not to proportion.
+
+Two design decisions carry it:
+
+- **Rendering approach.** Full 3D (three.js/WebGL) was rejected: it would break the
+  no-dependency single-file constraint for zero explanatory gain at this level of
+  abstraction, and CSS 3D transforms make depth-sorting painful. Hand-projected
+  isometric SVG (a dimetric projection, ~15 polygons of scenery) keeps everything
+  in one file and matches the diagram register.
+- **The diorama always renders world state.** Spatial keyframes (`[worldT, x, y]`
+  per segment) are interpolated at the *world* clock. In viewer mode, the
+  movie-order playhead is converted to world time by piecewise-linear interpolation
+  over the event anchor pairs — so when the film enters its second pass, the scene
+  visibly runs backward while the scrubber moves forward. That inversion of the
+  diorama is the thesis of the whole visualization, delivered as an interaction.
+
+Characters with coexisting forward/inverted copies appear **twice** in the scene
+(two Protagonists on the same highway), which is exactly the film's point. Ghosted
+(dashed) markers are reconstructed off-screen legs; the inverted driver's tag reads
+"?" until spoilers are on.
+
 ## Extending beyond Tallinn
 
 - **Scene as unit.** Keep one JSON document per sequence (Kyiv opera, Oslo freeport,
@@ -195,5 +223,6 @@ them — they are the intended interpretive frame.
 
 ## Screenshots
 
+![Scene view + viewer order](shot-scene.png)
 ![Viewer / movie order](shot-viewer.png)
 ![World / objective order, spoilers on](shot-world.png)

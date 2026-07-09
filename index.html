@@ -6,9 +6,10 @@
 <title>TENET · Tallinn — temporal track sheet</title>
 <style>
   :root{
-    --surface:#0B0E14; --panel:#121826; --panel2:#0E1420;
-    --hair:#232B3B; --hair2:#1A2130;
-    --ink:#E8ECF4; --muted:#8A94A8; --faint:#5A6478;
+    --surface:#070D13; --panel:#0D1620; --panel2:#0A121B;
+    --glass:rgba(16,26,38,.72); --steel:#2A3646;
+    --hair:#1E2A38; --hair2:#16202C;
+    --ink:#E8EEF4; --muted:#8A97A8; --faint:#57647A;
     --fwd:#F2543E; --inv:#3D8EF0; --obj:#C4740E; --turn:#9F79F2;
     --static:#55617A;
     --mono:ui-monospace,'JetBrains Mono','Cascadia Code',SFMono-Regular,Menlo,Consolas,monospace;
@@ -16,13 +17,25 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--surface);color:var(--ink);font-family:var(--sans)}
-  body{min-height:100vh;display:flex;flex-direction:column}
+  body{min-height:100vh;display:flex;flex-direction:column;
+       background:radial-gradient(120% 90% at 50% 0%,#0B141E 0%,var(--surface) 55%,#050A0F 100%)}
+  /* film grain + scanlines — the IMAX-print register, kept faint */
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px);
+    mix-blend-mode:overlay}
+  @media (prefers-reduced-motion:no-preference){
+    body::after{animation:grain 9s steps(3) infinite}
+    @keyframes grain{0%,100%{opacity:.9}50%{opacity:.6}}
+  }
+  /* the wordmark's mirrored E — the palindrome device from the film's title treatment */
+  .mir{display:inline-block;transform:scaleX(-1)}
 
   /* ---------- header ---------- */
-  header{padding:14px 20px 10px;border-bottom:1px solid var(--hair);
-         display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+  header{padding:14px 20px 10px;border-bottom:1px solid var(--steel);
+         display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;
+         background:var(--glass);backdrop-filter:blur(8px)}
   .brand{font-family:var(--mono)}
-  .brand h1{font-size:15px;font-weight:600;letter-spacing:.28em;text-transform:uppercase}
+  .brand h1{font-size:16px;font-weight:700;letter-spacing:.34em;text-transform:uppercase}
   .brand h1 .accent{color:var(--fwd)}
   .brand h1 .accent2{color:var(--inv)}
   .brand p{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.04em}
@@ -46,12 +59,20 @@
 
   /* ---------- layout ---------- */
   main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:0;min-height:0}
+  #left{min-width:0;display:flex;flex-direction:column;overflow-y:auto}
+  #scene{padding:8px 6px 0 12px;border-bottom:1px solid var(--hair)}
+  #scene.off{display:none}
+  #scene svg{max-height:400px;margin:0 auto}
   #stage{padding:6px 6px 0 12px;overflow-x:auto}
   svg{display:block;width:100%;height:auto}
+  .scenenote{font-family:var(--mono);font-size:10px;fill:var(--faint);letter-spacing:.06em}
+  .isolabel{font-family:var(--mono);font-size:10px;fill:var(--muted);letter-spacing:.14em}
+  .entlabel{font-family:var(--mono);font-size:9px;font-weight:700;fill:var(--ink);
+            paint-order:stroke;stroke:#05090E;stroke-width:2.4px}
 
   /* ---------- details panel ---------- */
-  aside{border-left:1px solid var(--hair);background:var(--panel2);padding:16px 18px;
-        overflow-y:auto;font-size:13px;line-height:1.5}
+  aside{border-left:1px solid var(--steel);background:var(--glass);backdrop-filter:blur(8px);
+        padding:16px 18px;overflow-y:auto;font-size:13px;line-height:1.5}
   aside .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--faint);
         text-transform:uppercase;margin:14px 0 4px}
   aside .eyebrow:first-child{margin-top:0}
@@ -129,7 +150,7 @@
 
 <header>
   <div class="brand">
-    <h1><span class="accent">TEN</span>ET<span style="color:var(--faint)"> / </span><span class="accent2">TAL</span>LINN</h1>
+    <h1><span class="accent">TEN</span><span class="mir accent2">E</span><span class="accent2">T</span><span style="color:var(--faint)"> / </span>TALLINN</h1>
     <p>temporal track sheet · one interpretation based on public timeline analyses</p>
   </div>
   <div class="controls">
@@ -137,6 +158,7 @@
       <button id="mode-viewer" aria-pressed="true">VIEWER&nbsp;/&nbsp;MOVIE&nbsp;ORDER</button>
       <button id="mode-world" aria-pressed="false">WORLD&nbsp;/&nbsp;OBJECTIVE&nbsp;ORDER</button>
     </div>
+    <button class="chip" id="t-scene" aria-pressed="true"><span class="dot"></span>SCENE</button>
     <button class="chip" id="t-characters" aria-pressed="true"><span class="dot"></span>CHARACTERS</button>
     <button class="chip" id="t-objects" aria-pressed="true"><span class="dot"></span>OBJECTS</button>
     <button class="chip" id="t-vehicles" aria-pressed="true"><span class="dot"></span>VEHICLES</button>
@@ -147,7 +169,10 @@
 </header>
 
 <main>
-  <div id="stage"></div>
+  <div id="left">
+    <div id="scene"></div>
+    <div id="stage"></div>
+  </div>
   <aside aria-live="polite">
     <div class="eyebrow">Nearest event</div>
     <div id="ev-title"></div>
@@ -422,13 +447,216 @@ events:[
 /* character display names for chips */
 const NAMES={protagonist:"Protagonist",neil:"Neil",kat:"Kat",sator:"Sator","saab-driver":"Saab driver"};
 
+/* ============ SCENE (2.5D isometric diorama) ============
+   Top-down world coords: x = along the highway (0..1000), y = lateral.
+   Highway strip y 60..140 · freeport warehouse x 820..980, y 180..330
+   (red room | turnstile | blue room) · dock/ship lower-left · wreck at x≈280.
+   Each PATHS entry keys a segment id to [worldT, x, y] keyframes; the marker
+   exists while world-t is inside that segment and is interpolated between
+   keyframes. Ghosted segments (reconstructed) render dashed here too.
+   The diorama ALWAYS renders world state: in viewer mode the movie-order
+   playhead is converted to world time via the event anchor pairs, so the
+   film's second pass visibly rewinds the scene.                          */
+
+const PATHS={
+  /* vehicles */
+  "bmw-run":[[15,110,120],[24,300,120],[33,470,120],[44,690,120],[48,730,125]],
+  "saab-wreck":[[8,280,100],[30,280,100]],
+  "saab-drive":[[30,300,95],[33,468,96],[44,640,96],[56,800,150],[62,852,182],[64,858,186]],
+  "audi-run":[[10,838,158],[14,760,112],[26,255,105],[28,290,105],[31,450,105],[33,485,105],[44,670,105],[48,745,112]],
+  /* the Protagonist */
+  "tp-heist":[[15,140,85],[20,225,85],[24,305,118]],
+  "tp-chase":[[24,305,118],[33,472,118],[44,692,118]],
+  "tp-captive":[[44,700,125],[46,790,195],[48,852,252],[60,852,252]],
+  "tp-freed":[[60,852,252],[64,893,255]],
+  "tp-return":[[28,292,97],[33,470,94],[44,632,94],[56,798,152],[62,853,184],[64,922,255]],
+  "tp-wreck":[[18,281,101],[28,286,100]],
+  "tp-exit":[[5,42,232],[12,120,170],[18,278,102]],
+  /* Neil */
+  "neil-drive":[[15,105,124],[24,296,124],[33,462,124],[44,686,124]],
+  "neil-regroup":[[44,690,130],[50,762,206],[58,845,216]],
+  "neil-raid":[[58,845,218],[61,862,240],[66,896,252]],
+  "neil-return":[[12,95,178],[18,272,112],[40,520,170],[55,780,200],[66,918,252]],
+  /* Kat */
+  "kat-hostage":[[20,508,102],[26,258,100],[28,292,100],[31,452,100],[33,487,100],[44,672,100],[48,748,110]],
+  "kat-warehouse":[[48,752,114],[50,802,202],[52,858,246],[56,908,250]],
+  "kat-shot":[[56,922,252],[66,906,257]],
+  "kat-heal":[[12,98,182],[18,275,116],[40,516,175],[55,776,204],[66,915,248]],
+  /* Sator */
+  "sator-command":[[5,838,212],[52,842,214]],
+  "sator-warehouse":[[52,848,250],[62,852,254],[64,896,256]],
+  "sator-back":[[10,840,162],[14,764,116],[26,260,108],[28,294,108],[31,455,108],[33,488,108],[44,668,108],[48,752,120],[50,802,206],[52,928,254],[64,924,256]],
+  /* objects */
+  "alg-convoy":[[2,60,82],[10,118,82],[24,300,84]],
+  "alg-tp":[[24,306,116],[33,472,116]],
+  "alg-saab":[[31,452,96],[33,468,96]],
+  "alg-sator":[[10,838,156],[14,760,110],[26,255,103],[28,290,103],[31,450,103]],
+  "case-convoy":[[2,60,88],[10,118,88],[24,300,90]],
+  "case-tp":[[24,306,121],[32,462,121]],
+  "case-inv":[[12,800,142],[14,758,116],[26,256,110],[28,292,110],[32,462,111]]
+};
+/* scene-only extras not tied to a track (the nuclear-transport convoy truck) */
+const EXTRAS=[
+  {id:"convoy-truck",kind:"truck",color:"#4A5668",world:[8,44],
+   path:[[8,90,82],[24,295,82],[44,660,80]]}
+];
+const ENT_KIND=t=>t.group==="vehicles"?"car":t.group==="objects"?"obj":"char";
+const SHORT={protagonist:"TP",neil:"N",kat:"K",sator:"S"};
+
+/* iso projection — dimetric, tuned to fit, deliberately not exact proportion */
+const K1=0.68,K2=0.24,OX=250,OY=42;
+const iso=(x,y,z=0)=>[(x-y)*K1+OX,(x+y)*K2+OY-z];
+const poly=(pts,fill,o=1,extra="")=>`<polygon points="${pts.map(p=>p.join(",")).join(" ")}" fill="${fill}" fill-opacity="${o}" ${extra}/>`;
+
+/* extruded box: top + two visible faces, one base color shaded by opacity */
+function isoBox(cx,cy,l,w,h,color,ghost){
+  const A=[cx-l/2,cy-w/2],B=[cx+l/2,cy-w/2],C=[cx+l/2,cy+w/2],D=[cx-l/2,cy+w/2];
+  const P=(c,z)=>iso(c[0],c[1],z);
+  const g=ghost?`stroke="${color}" stroke-dasharray="3 2" stroke-width="1"`:"";
+  const o=ghost?0.28:1;
+  return poly([P(B,h),P(C,h),P(C,0),P(B,0)],color,0.45*o,g)
+       + poly([P(C,h),P(D,h),P(D,0),P(C,0)],color,0.68*o,g)
+       + poly([P(A,h),P(B,h),P(C,h),P(D,h)],color,1*o,g);
+}
+function isoChar(x,y,color,ghost,tag){
+  const [sx,sy]=iso(x,y,0),[hx,hy]=iso(x,y,17);
+  const o=ghost?0.32:1;
+  return `<ellipse cx="${sx}" cy="${sy}" rx="5" ry="2.4" fill="#000" fill-opacity="${0.4*o}"/>
+    <line x1="${sx}" y1="${sy}" x2="${hx}" y2="${hy}" stroke="${color}" stroke-width="2.4" stroke-opacity="${o}" ${ghost?'stroke-dasharray="3 2"':""}/>
+    <circle cx="${hx}" cy="${hy}" r="4" fill="${color}" fill-opacity="${o}"/>` +
+    (S.show.labels&&tag?`<text class="entlabel" x="${hx}" y="${hy-7}" text-anchor="middle" opacity="${o}">${tag}</text>`:"");
+}
+function isoObj(x,y,color,ghost){
+  const [sx,sy]=iso(x,y,11);
+  const o=ghost?0.35:1;
+  return `<polygon points="${sx},${sy-5} ${sx+5},${sy} ${sx},${sy+5} ${sx-5},${sy}"
+    fill="${color}" fill-opacity="${o}" ${ghost?`stroke="${color}" stroke-dasharray="2 2"`:""}/>
+    <line x1="${sx}" y1="${sy+5}" x2="${sx}" y2="${sy+14}" stroke="${color}" stroke-width="1" stroke-opacity="${0.5*o}"/>`;
+}
+
+/* viewer-order → world-order time, piecewise-linear over event anchors */
+let ANCHORS=null;
+function worldOf(p){
+  if(S.mode==="world") return p;
+  if(!ANCHORS){
+    ANCHORS=[[0,12],...DATA.events.map(e=>[e.viewer,e.world]).sort((a,b)=>a[0]-b[0]),[100,5]];
+  }
+  for(let i=1;i<ANCHORS.length;i++){
+    const [v0,w0]=ANCHORS[i-1],[v1,w1]=ANCHORS[i];
+    if(p<=v1) return v1===v0?w0:w0+(w1-w0)*(p-v0)/(v1-v0);
+  }
+  return ANCHORS[ANCHORS.length-1][1];
+}
+function pathAt(path,t){
+  if(t<=path[0][0]) return [path[0][1],path[0][2]];
+  for(let i=1;i<path.length;i++){
+    if(t<=path[i][0]){
+      const [t0,x0,y0]=path[i-1],[t1,x1,y1]=path[i];
+      const f=t1===t0?0:(t-t0)/(t1-t0);
+      return [x0+(x1-x0)*f,y0+(y1-y0)*f];
+    }
+  }
+  const L=path[path.length-1]; return [L[1],L[2]];
+}
+
+function sceneStatic(){
+  const road=(y0,y1)=>[iso(0,y0),iso(1000,y0),iso(1000,y1),iso(0,y1)];
+  let s="";
+  /* ground */
+  s+=poly([iso(-60,20),iso(1040,20),iso(1040,360),iso(-60,360)],"#0C1520",1);
+  /* highway */
+  s+=poly(road(60,140),"#151F2C",1);
+  s+=poly(road(98,102),"#232F3E",1);
+  for(let x=20;x<1000;x+=60){ s+=poly([iso(x,78,0.5),iso(x+28,78,0.5),iso(x+28,81,0.5),iso(x,81,0.5)],"#2C3A4C",1);
+                               s+=poly([iso(x,119,0.5),iso(x+28,119,0.5),iso(x+28,122,0.5),iso(x,122,0.5)],"#2C3A4C",1); }
+  /* dock + container (Oslo placeholder) */
+  s+=poly([iso(0,190),iso(90,190),iso(90,280),iso(0,280)],"#101B27",1);
+  s+=isoBox(40,232,34,14,12,"#37536B",false);
+  /* freeport warehouse: floor, rooms, back walls, glass */
+  s+=poly([iso(820,180),iso(980,180),iso(980,330),iso(820,330)],"#111B26",1);
+  const wallH=26;
+  s+=poly([iso(820,180,wallH),iso(980,180,wallH),iso(980,180,0),iso(820,180,0)],"#1A2634",0.9);
+  s+=poly([iso(820,180,wallH),iso(820,330,wallH),iso(820,330,0),iso(820,180,0)],"#141E2A",0.9);
+  /* room glows: red / turnstile / blue */
+  s+=poly([iso(828,222),iso(886,222),iso(886,306),iso(828,306)],"var(--fwd)",0.13);
+  s+=poly([iso(886,222),iso(912,222),iso(912,306),iso(886,306)],"var(--turn)",0.20);
+  s+=poly([iso(912,222),iso(972,222),iso(972,306),iso(912,306)],"var(--inv)",0.13);
+  /* proofing glass between rooms */
+  s+=poly([iso(886,222,18),iso(886,306,18),iso(886,306,0),iso(886,222,0)],"#9FD5E8",0.14);
+  s+=poly([iso(912,222,18),iso(912,306,18),iso(912,306,0),iso(912,222,0)],"#9FD5E8",0.14);
+  /* wreck fire marker drawn with entities (time-gated) */
+  /* labels */
+  const L=(x,y,txt)=>{const p=iso(x,y,0);return `<text class="isolabel" x="${p[0]}" y="${p[1]}" text-anchor="middle">${txt}</text>`};
+  s+=L(60,44,"TALLINN HIGHWAY")+L(900,348,"FREEPORT")+L(899,208,"TURNSTILE")
+    +L(40,296,"◂ TO OSLO")+L(840,316,"RED")+L(958,316,"BLUE");
+  return s;
+}
+
+let sceneSVG=null;
+function buildScene(){
+  const scene=document.getElementById("scene");
+  scene.classList.toggle("off",!S.show.scene);
+  if(!S.show.scene){scene.innerHTML="";sceneSVG=null;return;}
+  scene.innerHTML=`<svg id="iso" viewBox="0 0 1000 400" role="img"
+    aria-label="Isometric diorama of the Tallinn sequence">
+    <text class="scenenote" x="12" y="16">SCENE — approximate spatial layout, world state</text>
+    <text class="scenenote" x="988" y="16" text-anchor="end" id="scene-tc"></text>
+    ${sceneStatic()}
+    <g id="ents"></g></svg>`;
+  sceneSVG=document.getElementById("iso");
+  updateScene();
+}
+
+function updateScene(){
+  if(!sceneSVG) return;
+  const wt=worldOf(S.p);
+  document.getElementById("scene-tc").textContent=
+    S.mode==="viewer"?`WORLD t ≈ ${wt.toFixed(0)} (derived from movie t ${S.p.toFixed(0)})`:`WORLD t = ${wt.toFixed(0)}`;
+  const items=[];
+  for(const tr of DATA.tracks){
+    if(!S.show[tr.group]) continue;
+    for(const seg of tr.segments){
+      const path=PATHS[seg.id];
+      if(!path||wt<seg.world[0]||wt>seg.world[1]) continue;
+      const [x,y]=pathAt(path,wt);
+      const ghost=!!seg.reconstructed;
+      const color={forward:"#F2543E",inverted:"#3D8EF0",static:"#55617A",turnstile:"#9F79F2"}[seg.direction];
+      // spoiler gate: the mystery car's driver is unidentified until spoilers are on
+      const tag=(!S.spoilers&&tr.id==="protagonist"&&seg.direction==="inverted")
+        ? "?" : SHORT[tr.id];
+      items.push({d:x+y,kind:ENT_KIND(tr),x,y,color,ghost,
+        tag,flip:seg.id==="saab-wreck",obj:tr.group==="objects"});
+    }
+  }
+  for(const ex of EXTRAS){
+    if(wt<ex.world[0]||wt>ex.world[1]) continue;
+    const [x,y]=pathAt(ex.path,wt);
+    items.push({d:x+y,kind:ex.kind,x,y,color:ex.color,ghost:false});
+  }
+  items.sort((a,b)=>a.d-b.d);
+  let out="";
+  for(const it of items){
+    if(it.kind==="car") out+=isoBox(it.x,it.y,it.flip?24:26,12,it.flip?6:9,it.color,it.ghost);
+    else if(it.kind==="truck") out+=isoBox(it.x,it.y,36,13,13,it.color,false);
+    else if(it.kind==="obj") out+=isoObj(it.x,it.y,"#C4740E",it.ghost);
+    else out+=isoChar(it.x,it.y,it.color,it.ghost,it.tag);
+  }
+  /* inverted fire on the wreck: burns world 18..28, reads as cold */
+  if(wt>=18&&wt<=28){
+    const [fx,fy]=iso(280,96,8);
+    out+=`<polygon points="${fx},${fy-9} ${fx+4},${fy} ${fx-4},${fy}" fill="#E8932C" fill-opacity=".8"/>
+      <polygon points="${fx+3},${fy-6} ${fx+6},${fy} ${fx},${fy}" fill="#9FD5E8" fill-opacity=".6"/>`;
+  }
+  document.getElementById("ents").innerHTML=out;
+}
+
 /* ================= STATE ================= */
 const S={
   mode:"viewer",          // viewer | world
   p:16,                   // playhead position on active axis
   playing:false,
   spoilers:false,
-  show:{characters:true,objects:true,vehicles:true,zones:true,labels:true}
+  show:{characters:true,objects:true,vehicles:true,zones:true,labels:true,scene:true}
 };
 
 /* ================= LAYOUT CONSTANTS ================= */
@@ -623,6 +851,7 @@ function setP(v,fromScrub){
   S.p=Math.max(0,Math.min(100,v));
   positionPlayhead();
   updateDetails();
+  updateScene();
 }
 
 function onDrag(e){
@@ -702,6 +931,7 @@ function setMode(m){
   document.getElementById("mode-viewer").setAttribute("aria-pressed",m==="viewer");
   document.getElementById("mode-world").setAttribute("aria-pressed",m==="world");
   build();   // full rebuild; CSS transitions cover the common attrs on rebuildless paths
+  updateScene();
 }
 document.getElementById("mode-viewer").addEventListener("click",()=>setMode("viewer"));
 document.getElementById("mode-world").addEventListener("click",()=>setMode("world"));
@@ -719,10 +949,16 @@ bindChip("t-objects","objects");
 bindChip("t-vehicles","vehicles");
 bindChip("t-zones","zones");
 bindChip("t-labels","labels");
+document.getElementById("t-scene").addEventListener("click",e=>{
+  S.show.scene=!S.show.scene;
+  e.currentTarget.setAttribute("aria-pressed",S.show.scene);
+  buildScene();
+});
 document.getElementById("t-spoilers").addEventListener("click",e=>{
   S.spoilers=!S.spoilers;
   e.currentTarget.setAttribute("aria-pressed",S.spoilers);
   build();
+  updateScene();
 });
 
 /* ================= TRANSPORT ================= */
@@ -767,6 +1003,7 @@ if(location.hash){
   const m=location.hash.match(/t=([\d.]+)/); if(m) S.p=parseFloat(m[1]);
 }
 build();
+buildScene();
 </script>
 </body>
 </html>
