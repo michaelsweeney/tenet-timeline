@@ -17,7 +17,8 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--surface);color:var(--ink);font-family:var(--sans)}
-  body{min-height:100vh;display:flex;flex-direction:column;
+  html,body{height:100%}
+  body{height:100vh;overflow:hidden;display:flex;flex-direction:column;
        background:radial-gradient(120% 90% at 50% 0%,#0B141E 0%,var(--surface) 55%,#050A0F 100%)}
   /* film grain + scanlines — the IMAX-print register, kept faint */
   body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;
@@ -58,15 +59,24 @@
   .chip.spoiler[aria-pressed="true"] .dot{background:var(--fwd)}
 
   /* ---------- layout ---------- */
-  main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:0;min-height:0}
-  #left{min-width:0;display:flex;flex-direction:column;overflow-y:auto}
-  #scene{padding:8px 6px 0 12px;border-bottom:1px solid var(--hair)}
+  main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 6px var(--aside-w,340px);
+       gap:0;min-height:0}
+  #left{min-width:0;display:flex;flex-direction:column;overflow:hidden}
+  #scene{padding:8px 6px 0 12px;flex:none}
   #scene.off{display:none}
-  #scene svg{max-height:600px;margin:0 auto}
+  #scene svg{height:var(--scene-h,380px);max-height:none;width:100%;margin:0 auto}
+  /* drag splitters */
+  #split-x{cursor:col-resize;background:var(--hair);transition:background .15s}
+  #split-x:hover,#split-x.drag{background:var(--turn)}
+  #split-y{height:6px;cursor:row-resize;background:var(--hair);flex:none;transition:background .15s}
+  #split-y:hover,#split-y.drag{background:var(--turn)}
+  #split-y.off{display:none}
   .scenehead{display:flex;justify-content:space-between;gap:12px;
     font-family:var(--mono);font-size:10px;color:var(--faint);
     letter-spacing:.06em;padding:2px 6px 6px}
-  #stage{padding:6px 6px 0 12px;overflow-x:auto}
+  #stage{padding:6px 6px 0 12px;flex:1;min-height:0;overflow:hidden}
+  #stage.scroll{overflow-y:auto}
+  #stage svg{margin:0 auto}
   svg{display:block;width:100%;height:auto}
   .scenenote{font-family:var(--mono);font-size:10px;fill:var(--faint);letter-spacing:.06em}
   .isolabel{font-family:var(--mono);font-size:10px;fill:var(--muted);letter-spacing:.14em}
@@ -142,6 +152,7 @@
 
   @media (max-width:980px){
     main{grid-template-columns:1fr}
+    #split-x{display:none}
     aside{border-left:0;border-top:1px solid var(--hair)}
   }
   @media (prefers-reduced-motion:reduce){
@@ -167,15 +178,19 @@
     <button class="chip" id="t-vehicles" aria-pressed="true"><span class="dot"></span>VEHICLES</button>
     <button class="chip" id="t-zones" aria-pressed="true"><span class="dot"></span>ZONES</button>
     <button class="chip" id="t-labels" aria-pressed="true"><span class="dot"></span>LABELS</button>
-    <button class="chip spoiler" id="t-spoilers" aria-pressed="false"><span class="dot"></span>SPOILERS</button>
+    <button class="chip spoiler" id="t-spoilers" aria-pressed="true"><span class="dot"></span>SPOILERS</button>
   </div>
 </header>
 
 <main>
   <div id="left">
     <div id="scene"></div>
+    <div id="split-y" role="separator" aria-orientation="horizontal"
+         aria-label="Resize scene panel" title="Drag to resize the scene"></div>
     <div id="stage"></div>
   </div>
+  <div id="split-x" role="separator" aria-orientation="vertical"
+       aria-label="Resize details panel" title="Drag to resize the details panel"></div>
   <aside aria-live="polite">
     <div class="eyebrow">Nearest event</div>
     <div id="ev-title"></div>
@@ -521,13 +536,64 @@ function isoBox(cx,cy,l,w,h,color,ghost){
        + poly([P(C,h),P(D,h),P(D,0),P(C,0)],color,0.68*o,g)
        + poly([P(A,h),P(B,h),P(C,h),P(D,h)],color,1*o,g);
 }
-function isoChar(x,y,color,ghost,tag){
-  const [sx,sy]=iso(x,y,0),[hx,hy]=iso(x,y,17);
+
+/* vehicle: heading-rotated footprint, painter-sorted faces, spinning wheels.
+   Wheel/limb phase is a function of WORLD TIME, so motion scrubs with the
+   playhead and runs backward when the diorama rewinds. */
+function isoCar(cx,cy,l,w,h,color,ghost,heading,phase,moving,flipped){
+  const c=Math.cos(heading),s=Math.sin(heading);
+  const rot=(dx,dy)=>[cx+dx*c-dy*s,cy+dx*s+dy*c];
+  const corners=[rot(-l/2,-w/2),rot(l/2,-w/2),rot(l/2,w/2),rot(-l/2,w/2)];
+  const P=(p,z)=>iso(p[0],p[1],z);
+  const g=ghost?`stroke="${color}" stroke-dasharray="3 2" stroke-width="1"`:"";
+  const o=ghost?0.28:1;
+  /* side faces back-to-front */
+  const faces=[0,1,2,3].map(i=>{
+    const a=corners[i],b=corners[(i+1)%4];
+    return {d:(a[0]+a[1]+b[0]+b[1])/2,a,b};
+  }).sort((f1,f2)=>f1.d-f2.d);
+  let out="";
+  faces.forEach((f,rank)=>{
+    out+=poly([P(f.a,h),P(f.b,h),P(f.b,0),P(f.a,0)],color,(0.32+0.13*rank)*o,g);
+  });
+  out+=poly(corners.map(p=>P(p,h)),color,1*o,g);
+  /* wheels: at the two deepest (front-facing) corners, inset toward center */
+  const wpos=corners.map(p=>[p[0]+(cx-p[0])*0.22,p[1]+(cy-p[1])*0.22])
+    .sort((a,b)=>(a[0]+a[1])-(b[0]+b[1])).slice(flipped?0:2);
+  for(const p of wpos){
+    const [wx,wy]=P(p,flipped?h+2:0);
+    const a=phase, r=2.6;
+    out+=`<circle cx="${wx}" cy="${wy}" r="${r}" fill="#0A0F16" fill-opacity="${0.95*o}" stroke="${color}" stroke-opacity="${0.5*o}" stroke-width=".7"/>
+      <line x1="${wx-Math.cos(a)*r}" y1="${wy-Math.sin(a)*r}" x2="${wx+Math.cos(a)*r}" y2="${wy+Math.sin(a)*r}"
+        stroke="#7B8AA0" stroke-width=".8" stroke-opacity="${0.9*o}"/>`;
+  }
+  return out;
+}
+
+/* person: billboard mini-figure with a deterministic walk cycle.
+   Limbs swing along the screen-space motion direction; standing = neutral. */
+function isoPerson(x,y,color,ghost,tag,phase,dx,dy,moving){
+  const [sx,sy]=iso(x,y,0);
   const o=ghost?0.32:1;
-  return `<ellipse cx="${sx}" cy="${sy}" rx="5" ry="2.4" fill="#000" fill-opacity="${0.4*o}"/>
-    <line x1="${sx}" y1="${sy}" x2="${hx}" y2="${hy}" stroke="${color}" stroke-width="2.4" stroke-opacity="${o}" ${ghost?'stroke-dasharray="3 2"':""}/>
-    <circle cx="${hx}" cy="${hy}" r="4" fill="${color}" fill-opacity="${o}"/>` +
-    (S.show.labels&&tag?`<text class="entlabel" x="${hx}" y="${hy-7}" text-anchor="middle" opacity="${o}">${tag}</text>`:"");
+  const A=moving?1:0;
+  const s1=Math.sin(phase)*3.6*A, s2=-Math.sin(phase)*3.6*A;
+  const spread=moving?0:1.8;               // idle stance: feet apart, not a pin
+  const lift=f=>-Math.max(0,Math.sin(f))*1.3*A;
+  const hipY=sy-8.5, shY=sy-15, headY=sy-19;
+  const dash=ghost?'stroke-dasharray="3 2"':"";
+  const limb=(x1,y1,x2,y2,wd)=>`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+    stroke="${color}" stroke-width="${wd}" stroke-opacity="${o}" stroke-linecap="round" ${dash}/>`;
+  return `<ellipse cx="${sx}" cy="${sy}" rx="5" ry="2.2" fill="#000" fill-opacity="${0.4*o}"/>`
+    /* legs */
+    + limb(sx,hipY, sx+dx*s1-spread, sy+dy*s1*0.5+lift(phase), 2)
+    + limb(sx,hipY, sx+dx*s2+spread, sy+dy*s2*0.5+lift(phase+Math.PI), 2)
+    /* torso */
+    + limb(sx,hipY, sx,shY, 2.8)
+    /* arms (counter-swing) */
+    + limb(sx,shY+1, sx+dx*s2*0.85, shY+5.5+dy*s2*0.4, 1.6)
+    + limb(sx,shY+1, sx+dx*s1*0.85, shY+5.5+dy*s1*0.4, 1.6)
+    + `<circle cx="${sx}" cy="${headY}" r="3.1" fill="${color}" fill-opacity="${o}"/>`
+    + (S.show.labels&&tag?`<text class="entlabel" x="${sx}" y="${headY-6}" text-anchor="middle" opacity="${o}">${tag}</text>`:"");
 }
 function isoObj(x,y,color,ghost){
   const [sx,sy]=iso(x,y,11);
@@ -549,6 +615,17 @@ function worldOf(p){
     if(p<=v1) return v1===v0?w0:w0+(w1-w0)*(p-v0)/(v1-v0);
   }
   return ANCHORS[ANCHORS.length-1][1];
+}
+/* velocity sample around t → screen-space motion dir, plan heading, moving flag */
+function motionAt(path,world,t){
+  const t0=Math.max(world[0],t-0.5),t1=Math.min(world[1],t+0.5);
+  const q1=pathAt(path,t0),q2=pathAt(path,t1);
+  const vx=q2[0]-q1[0],vy=q2[1]-q1[1];
+  const svx=(vx-vy)*K1,svy=(vx+vy)*K2;
+  const mag=Math.hypot(svx,svy);
+  return {moving:mag>0.6,
+          dx:mag>0.001?svx/mag:1, dy:mag>0.001?svy/mag:0,
+          heading:(vx||vy)?Math.atan2(vy,vx):0};
 }
 function pathAt(path,t){
   if(t<=path[0][0]) return [path[0][1],path[0][2]];
@@ -599,6 +676,7 @@ let sceneSVG=null;
 function buildScene(){
   const scene=document.getElementById("scene");
   scene.classList.toggle("off",!S.show.scene);
+  document.getElementById("split-y").classList.toggle("off",!S.show.scene);
   if(!S.show.scene){scene.innerHTML="";sceneSVG=null;return;}
   scene.innerHTML=`<div class="scenehead">
       <span>SCENE — approximate spatial layout, world state · auto-framed to the action</span>
@@ -669,23 +747,28 @@ function updateScene(){
       // spoiler gate: the mystery car's driver is unidentified until spoilers are on
       const tag=(!S.spoilers&&tr.id==="protagonist"&&seg.direction==="inverted")
         ? "?" : SHORT[tr.id];
-      items.push({d:x+y,kind:ENT_KIND(tr),x,y,color,ghost,
-        tag,flip:seg.id==="saab-wreck",obj:tr.group==="objects"});
+      items.push({d:x+y,kind:ENT_KIND(tr),x,y,color,ghost,tag,
+        flip:seg.id==="saab-wreck",...motionAt(path,seg.world,wt)});
     }
   }
   for(const ex of EXTRAS){
     if(wt<ex.world[0]||wt>ex.world[1]) continue;
     const [x,y]=pathAt(ex.path,wt);
-    items.push({d:x+y,kind:ex.kind,x,y,color:ex.color,ghost:false});
+    items.push({d:x+y,kind:ex.kind,x,y,color:ex.color,ghost:false,
+      ...motionAt(ex.path,ex.world,wt)});
   }
   items.sort((a,b)=>a.d-b.d);
   frameCamera(items);
+  const phase=wt*7, wheel=wt*9;
   let out="";
   for(const it of items){
-    if(it.kind==="car") out+=isoBox(it.x,it.y,it.flip?24:26,12,it.flip?6:9,it.color,it.ghost);
-    else if(it.kind==="truck") out+=isoBox(it.x,it.y,36,13,13,it.color,false);
+    const po=phase+((it.tag||"x").charCodeAt(0)%7); // stable per-entity gait offset
+    if(it.kind==="car") out+=isoCar(it.x,it.y,it.flip?24:26,12,it.flip?6:9,
+      it.color,it.ghost,it.flip?0:it.heading,wheel,it.moving,it.flip);
+    else if(it.kind==="truck") out+=isoCar(it.x,it.y,36,13,13,it.color,false,
+      it.heading,wheel,it.moving,false);
     else if(it.kind==="obj") out+=isoObj(it.x,it.y,"#C4740E",it.ghost);
-    else out+=isoChar(it.x,it.y,it.color,it.ghost,it.tag);
+    else out+=isoPerson(it.x,it.y,it.color,it.ghost,it.tag,po,it.dx,it.dy,it.moving);
   }
   /* inverted fire on the wreck: burns world 18..28, reads as cold */
   if(wt>=18&&wt<=28){
@@ -701,14 +784,14 @@ const S={
   mode:"viewer",          // viewer | world
   p:16,                   // playhead position on active axis
   playing:false,
-  spoilers:false,
+  spoilers:true,
   show:{characters:true,objects:true,vehicles:true,zones:true,labels:true,scene:true}
 };
 
 /* ================= LAYOUT CONSTANTS ================= */
 const X0=170,X1=985,W=X1-X0;           // plot x-range in viewBox units
-const LANE_H=17,LANE_GAP=5,ROW_PAD=10;
-const RULER_H=44,GROUP_H=18;
+const LANE_H=15,LANE_GAP=4,ROW_PAD=7;
+const RULER_H=40,GROUP_H=16;
 const xOf=t=>X0+(t/100)*W;
 const tOf=x=>Math.max(0,Math.min(100,(x-X0)/W*100));
 
@@ -867,6 +950,7 @@ function build(){
   });
   positionPlayhead();
   updateDetails();
+  if(typeof fitTracks==="function") fitTracks();
 }
 
 /* ================= PLAYHEAD / SCRUB ================= */
@@ -1023,6 +1107,65 @@ function togglePlay(force){
   else if(raf) cancelAnimationFrame(raf);
 }
 playBtn.addEventListener("click",()=>togglePlay());
+
+/* ================= PANE SPLITTERS ================= */
+const clampN=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+function initSplitters(){
+  const root=document.documentElement;
+  const saved=k=>localStorage.getItem("tenet-"+k);
+  if(saved("aside-w")) root.style.setProperty("--aside-w",saved("aside-w"));
+  if(saved("scene-h")) root.style.setProperty("--scene-h",saved("scene-h"));
+  const bind=(el,onMove,key,getVal)=>{
+    el.addEventListener("pointerdown",e=>{
+      e.preventDefault();
+      el.classList.add("drag");
+      el.setPointerCapture(e.pointerId);
+      const move=ev=>onMove(ev);
+      const up=()=>{
+        el.classList.remove("drag");
+        el.removeEventListener("pointermove",move);
+        el.removeEventListener("pointerup",up);
+        localStorage.setItem("tenet-"+key,getVal());
+      };
+      el.addEventListener("pointermove",move);
+      el.addEventListener("pointerup",up);
+    });
+  };
+  bind(document.getElementById("split-x"),
+    ev=>{
+      const w=clampN(window.innerWidth-ev.clientX-3,240,Math.min(680,window.innerWidth*0.6));
+      root.style.setProperty("--aside-w",w+"px");
+    },"aside-w",()=>getComputedStyle(root).getPropertyValue("--aside-w").trim());
+  bind(document.getElementById("split-y"),
+    ev=>{
+      const top=document.getElementById("scene").getBoundingClientRect().top;
+      const h=clampN(ev.clientY-top-26,140,window.innerHeight*0.85);
+      root.style.setProperty("--scene-h",h+"px");
+      fitTracks();
+    },"scene-h",()=>getComputedStyle(root).getPropertyValue("--scene-h").trim());
+}
+initSplitters();
+
+/* ---- fit the track sheet to the pane; in-pane scroll below a usable floor ---- */
+const TRACKS_MIN_H=300;
+function fitTracks(){
+  const st=document.getElementById("stage");
+  const svg=document.getElementById("board");
+  if(!svg) return;
+  const vb=svg.viewBox.baseVal, ar=vb.height/vb.width;
+  const availW=st.clientWidth-18, availH=st.clientHeight-8;
+  if(availH<=0||availW<=0) return;
+  const naturalH=availW*ar;
+  if(naturalH<=availH){                       // fits full-width
+    svg.style.width="100%";svg.style.height="auto";st.classList.remove("scroll");
+  }else if(availH>=TRACKS_MIN_H){             // scale down to fit the pane
+    svg.style.height=availH+"px";svg.style.width=(availH/ar)+"px";
+    st.classList.remove("scroll");
+  }else{                                      // too squeezed: full size + in-pane scroll
+    svg.style.width="100%";svg.style.height="auto";st.classList.add("scroll");
+  }
+}
+new ResizeObserver(fitTracks).observe(document.getElementById("stage"));
 
 /* ================= KEYBOARD ================= */
 window.addEventListener("keydown",e=>{
