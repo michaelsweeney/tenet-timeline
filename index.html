@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TENET · Tallinn — temporal track sheet</title>
+<style>
+  :root{
+    --surface:#0B0E14; --panel:#121826; --panel2:#0E1420;
+    --hair:#232B3B; --hair2:#1A2130;
+    --ink:#E8ECF4; --muted:#8A94A8; --faint:#5A6478;
+    --fwd:#F2543E; --inv:#3D8EF0; --obj:#C4740E; --turn:#9F79F2;
+    --static:#55617A;
+    --mono:ui-monospace,'JetBrains Mono','Cascadia Code',SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--surface);color:var(--ink);font-family:var(--sans)}
+  body{min-height:100vh;display:flex;flex-direction:column}
+
+  /* ---------- header ---------- */
+  header{padding:14px 20px 10px;border-bottom:1px solid var(--hair);
+         display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+  .brand{font-family:var(--mono)}
+  .brand h1{font-size:15px;font-weight:600;letter-spacing:.28em;text-transform:uppercase}
+  .brand h1 .accent{color:var(--fwd)}
+  .brand h1 .accent2{color:var(--inv)}
+  .brand p{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.04em}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-left:auto}
+
+  .seg-toggle{display:flex;border:1px solid var(--hair);border-radius:7px;overflow:hidden;font-family:var(--mono)}
+  .seg-toggle button{background:transparent;border:0;color:var(--muted);font:inherit;
+    font-size:11px;letter-spacing:.06em;padding:7px 13px;cursor:pointer}
+  .seg-toggle button[aria-pressed="true"]{background:var(--panel);color:var(--ink);
+    box-shadow:inset 0 -2px 0 var(--turn)}
+  .seg-toggle button:focus-visible{outline:2px solid var(--turn);outline-offset:-2px}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;
+    letter-spacing:.04em;color:var(--muted);border:1px solid var(--hair);border-radius:7px;
+    padding:6px 10px;background:transparent;cursor:pointer;user-select:none}
+  .chip[aria-pressed="true"]{color:var(--ink);background:var(--panel);border-color:#33405a}
+  .chip .dot{width:8px;height:8px;border-radius:2px;background:var(--faint)}
+  .chip[aria-pressed="true"] .dot{background:var(--turn)}
+  .chip:focus-visible{outline:2px solid var(--turn);outline-offset:1px}
+  .chip.spoiler[aria-pressed="true"] .dot{background:var(--fwd)}
+
+  /* ---------- layout ---------- */
+  main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:0;min-height:0}
+  #stage{padding:6px 6px 0 12px;overflow-x:auto}
+  svg{display:block;width:100%;height:auto}
+
+  /* ---------- details panel ---------- */
+  aside{border-left:1px solid var(--hair);background:var(--panel2);padding:16px 18px;
+        overflow-y:auto;font-size:13px;line-height:1.5}
+  aside .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--faint);
+        text-transform:uppercase;margin:14px 0 4px}
+  aside .eyebrow:first-child{margin-top:0}
+  #ev-title{font-size:15px;font-weight:600;line-height:1.3}
+  #ev-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
+  .who{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .who span{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:5px;
+        border:1px solid var(--hair);color:var(--ink)}
+  .who span.fwd{border-color:color-mix(in srgb,var(--fwd) 55%,transparent);box-shadow:inset 3px 0 0 var(--fwd)}
+  .who span.inv{border-color:color-mix(in srgb,var(--inv) 55%,transparent);box-shadow:inset 3px 0 0 var(--inv)}
+  #ev-knows,#ev-actual,#ev-interp{color:#C9D2E2}
+  #ev-actual{border-left:2px solid var(--fwd);padding-left:10px}
+  #ev-actual.hidden-spoiler{color:var(--faint);border-left-color:var(--hair);font-style:italic}
+  #ev-interp{color:var(--muted);font-style:italic}
+  .ev-nav{display:flex;gap:8px;margin-top:14px}
+  .ev-nav button{flex:1;background:var(--panel);border:1px solid var(--hair);color:var(--muted);
+        font-family:var(--mono);font-size:11px;padding:7px 0;border-radius:7px;cursor:pointer}
+  .ev-nav button:hover{color:var(--ink);border-color:#33405a}
+  .ev-nav button:focus-visible{outline:2px solid var(--turn)}
+
+  /* ---------- footer / transport ---------- */
+  footer{border-top:1px solid var(--hair);padding:10px 20px 14px}
+  .transport{display:flex;align-items:center;gap:14px}
+  #play{width:34px;height:34px;border-radius:50%;border:1px solid var(--hair);background:var(--panel);
+        color:var(--ink);cursor:pointer;font-size:12px;flex:none}
+  #play:focus-visible{outline:2px solid var(--turn)}
+  #scrub{flex:1;appearance:none;height:26px;background:transparent;cursor:pointer}
+  #scrub::-webkit-slider-runnable-track{height:6px;border-radius:3px;
+        background:linear-gradient(90deg,var(--fwd) 0 0) 0/var(--fill,0%) 100% no-repeat,var(--hair2)}
+  #scrub::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;
+        background:var(--ink);border:3px solid var(--surface);margin-top:-5px;
+        box-shadow:0 0 0 1px var(--hair)}
+  #scrub:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 2px var(--turn)}
+  #tc{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:118px;text-align:right}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:10px;font-family:var(--mono);
+        font-size:10.5px;color:var(--muted);letter-spacing:.03em}
+  .legend i{display:inline-block;width:20px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .legend .k-fwd i{background:var(--fwd)} .legend .k-inv i{background:var(--inv)}
+  .legend .k-obj i{background:var(--obj)} .legend .k-static i{background:var(--static)}
+  .legend .k-turn i{background:transparent;border-bottom:2px solid var(--turn);border-radius:0;height:5px}
+  .legend .k-ghost i{background:transparent;border:1px dashed var(--faint)}
+  .disclaimer{margin-top:8px;font-size:10.5px;color:var(--faint);font-family:var(--mono)}
+  .disclaimer a{color:var(--faint)}
+
+  /* ---------- svg pieces ---------- */
+  .rowline{stroke:var(--hair2);stroke-width:1}
+  .grouphead{font-family:var(--mono);font-size:9px;letter-spacing:.26em;fill:var(--faint)}
+  .trackname{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+  .tracksub{font-family:var(--mono);font-size:9px;fill:var(--faint)}
+  .seg rect{transition:x .5s ease,width .5s ease,opacity .5s ease}
+  .seg text,.seg path{transition:opacity .5s ease}
+  .seglabel{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+  .cliplabel{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.02em}
+  .tick text{font-family:var(--mono);font-size:9px;fill:var(--faint)}
+  .tick line{stroke:var(--hair2)}
+  .evd{cursor:pointer;transition:transform .5s ease}
+  .evd polygon{fill:var(--panel);stroke:var(--muted);stroke-width:1.2}
+  .evd.active polygon{fill:var(--ink);stroke:var(--ink)}
+  .evd:hover polygon{stroke:var(--ink)}
+  #playhead{pointer-events:none;transition:none}
+  .conn{fill:none;stroke:var(--turn);stroke-width:2;transition:opacity .5s ease}
+  .conn.handoff{stroke:var(--obj)}
+  .axisnote{font-family:var(--mono);font-size:10px;fill:var(--faint);letter-spacing:.06em}
+
+  @media (max-width:980px){
+    main{grid-template-columns:1fr}
+    aside{border-left:0;border-top:1px solid var(--hair)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .seg rect,.seg text,.seg path,.evd,.conn{transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1><span class="accent">TEN</span>ET<span style="color:var(--faint)"> / </span><span class="accent2">TAL</span>LINN</h1>
+    <p>temporal track sheet · one interpretation based on public timeline analyses</p>
+  </div>
+  <div class="controls">
+    <div class="seg-toggle" role="group" aria-label="Time axis mode">
+      <button id="mode-viewer" aria-pressed="true">VIEWER&nbsp;/&nbsp;MOVIE&nbsp;ORDER</button>
+      <button id="mode-world" aria-pressed="false">WORLD&nbsp;/&nbsp;OBJECTIVE&nbsp;ORDER</button>
+    </div>
+    <button class="chip" id="t-characters" aria-pressed="true"><span class="dot"></span>CHARACTERS</button>
+    <button class="chip" id="t-objects" aria-pressed="true"><span class="dot"></span>OBJECTS</button>
+    <button class="chip" id="t-vehicles" aria-pressed="true"><span class="dot"></span>VEHICLES</button>
+    <button class="chip" id="t-zones" aria-pressed="true"><span class="dot"></span>ZONES</button>
+    <button class="chip" id="t-labels" aria-pressed="true"><span class="dot"></span>LABELS</button>
+    <button class="chip spoiler" id="t-spoilers" aria-pressed="false"><span class="dot"></span>SPOILERS</button>
+  </div>
+</header>
+
+<main>
+  <div id="stage"></div>
+  <aside aria-live="polite">
+    <div class="eyebrow">Nearest event</div>
+    <div id="ev-title"></div>
+    <div id="ev-meta"></div>
+    <div class="eyebrow">Present</div>
+    <div class="who" id="ev-who"></div>
+    <div class="eyebrow">What the viewer knows</div>
+    <div id="ev-knows"></div>
+    <div class="eyebrow">What is actually happening</div>
+    <div id="ev-actual"></div>
+    <div class="eyebrow" id="ev-interp-head">Interpretation</div>
+    <div id="ev-interp"></div>
+    <div class="ev-nav">
+      <button id="ev-prev">◂ PREV EVENT</button>
+      <button id="ev-next">NEXT EVENT ▸</button>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <div class="transport">
+    <button id="play" aria-label="Play / pause">▶</button>
+    <input id="scrub" type="range" min="0" max="100" step="0.5" value="16"
+           aria-label="Timeline position">
+    <div id="tc"></div>
+  </div>
+  <div class="legend">
+    <span class="k-fwd"><i></i>forward time (chevrons ▸)</span>
+    <span class="k-inv"><i></i>inverted (chevrons ◂ = subjective direction)</span>
+    <span class="k-obj"><i></i>algorithm piece / handoff</span>
+    <span class="k-static"><i></i>static / no subjective clock</span>
+    <span class="k-turn"><i></i>turnstile U-turn</span>
+    <span class="k-ghost"><i></i>reconstructed, off camera</span>
+    <span>◇ event &nbsp;·&nbsp; keys: ←/→ scrub · [ ] events · space play · m mode · s spoilers</span>
+  </div>
+  <div class="disclaimer">
+    Abstract units 0–100, not film timestamps. Educational diagram — no footage, stills, or dialogue.
+    Sources: Taylor Holmes timeline infographic · r/tenet relative-age diagram · r/tenet Sator/Kat Tallinn thread · GQ explainer.
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= DATA ================= */
+/* world  : objective interval occupied at Tallinn (0–100 abstract)
+   viewer : list of on-screen windows in movie order (0–100 abstract)
+   direction: forward | inverted | static
+   A segment with viewer:[] only exists off camera → hidden in viewer mode,
+   ghosted (dashed) in world mode when flagged reconstructed:true.        */
+
+const DATA = {
+tracks:[
+ {id:"protagonist",label:"The Protagonist",group:"characters",lanes:2,segments:[
+   {id:"tp-heist",lane:0,direction:"forward",world:[15,24],viewer:[[4,16]],
+    location:"Tallinn highway",label:"Convoy heist"},
+   {id:"tp-chase",lane:0,direction:"forward",world:[24,44],viewer:[[16,34]],
+    location:"Tallinn highway",label:"Forward chase"},
+   {id:"tp-captive",lane:0,direction:"forward",world:[44,60],viewer:[[34,50]],
+    location:"Freeport warehouse",label:"Captured · interrogated"},
+   {id:"tp-freed",lane:0,direction:"forward",world:[60,64],viewer:[[50,62]],
+    location:"Freeport warehouse",label:"Freed · chooses to invert"},
+   {id:"tp-return",lane:1,direction:"inverted",world:[28,64],viewer:[[62,88]],
+    location:"Tallinn highway",label:"Backward through the chase"},
+   {id:"tp-wreck",lane:1,direction:"inverted",world:[18,28],viewer:[[88,94]],
+    location:"Tallinn highway",label:"Trapped in the wreck"},
+   {id:"tp-exit",lane:1,direction:"inverted",world:[5,18],viewer:[[94,100]],
+    location:"Toward the ship",label:"Recovered · toward Oslo ▸"}],
+  connectors:[{atWorld:64,atViewer:62,from:"tp-freed",to:"tp-return",kind:"turnstile"}]},
+
+ {id:"neil",label:"Neil",group:"characters",lanes:2,segments:[
+   {id:"neil-drive",lane:0,direction:"forward",world:[15,44],viewer:[[4,34]],
+    location:"Tallinn highway",label:"Wheelman — the BMW"},
+   {id:"neil-regroup",lane:0,direction:"forward",world:[44,58],viewer:[],reconstructed:true,
+    location:"Tallinn",label:"Raises Ives' unit (off camera)"},
+   {id:"neil-raid",lane:0,direction:"forward",world:[58,66],viewer:[[50,62]],
+    location:"Freeport warehouse",label:"Warehouse raid"},
+   {id:"neil-return",lane:1,direction:"inverted",world:[12,66],viewer:[[88,100]],
+    location:"Warehouse → highway",label:"Escorts wounded Kat backward"}],
+  connectors:[{atWorld:66,atViewer:62,from:"neil-raid",to:"neil-return",kind:"turnstile"}]},
+
+ {id:"kat",label:"Kat",group:"characters",lanes:2,segments:[
+   {id:"kat-hostage",lane:0,direction:"forward",world:[20,48],viewer:[[16,34]],
+    location:"Tallinn highway",label:"Hostage in the inverted Audi"},
+   {id:"kat-warehouse",lane:0,direction:"forward",world:[48,56],viewer:[[34,42]],
+    location:"Freeport warehouse",label:"Held at the freeport"},
+   {id:"kat-shot",lane:0,direction:"forward",world:[56,66],viewer:[[42,62]],
+    location:"Freeport warehouse",label:"Blue room (respirator) · shot — inverted round"},
+   {id:"kat-heal",lane:1,direction:"inverted",world:[12,66],viewer:[[88,100]],
+    location:"Warehouse → highway",label:"Inverted to arrest the wound"}],
+  connectors:[{atWorld:66,atViewer:61,from:"kat-shot",to:"kat-heal",kind:"turnstile"}]},
+
+ {id:"sator",label:"Sator",group:"characters",lanes:2,segments:[
+   {id:"sator-command",lane:0,direction:"forward",world:[5,52],viewer:[],reconstructed:true,
+    location:"Freeport warehouse",label:"Monitors the heist by the red door (earpiece)"},
+   {id:"sator-warehouse",lane:0,direction:"forward",world:[52,64],viewer:[[46,50]],
+    location:"Freeport warehouse",label:"Red-room interrogation · into the turnstile"},
+   {id:"sator-back",lane:1,direction:"inverted",world:[10,64],
+    viewer:[[16,34],[38,46],[62,88]],
+    location:"Warehouse → highway",label:"Backward: blue room · BMW check · the Audi · sees the hand-off",
+    safeLabel:"A second, backwards Sator"},
+   {id:"sator-past",lane:1,direction:"inverted",world:[0,10],viewer:[],reconstructed:true,
+    location:"Into the past",label:"Re-inverts off screen · collects the 241 (disputed)"}],
+  connectors:[{atWorld:64,atViewer:50,from:"sator-warehouse",to:"sator-back",kind:"turnstile"}]},
+
+ {id:"algorithm",label:"Algorithm piece · 241",group:"objects",lanes:2,segments:[
+   {id:"alg-convoy",lane:0,direction:"forward",world:[2,24],viewer:[[4,16]],
+    location:"Armored convoy",label:"In the convoy truck"},
+   {id:"alg-tp",lane:0,direction:"forward",world:[24,33],viewer:[[16,25]],
+    location:"Tallinn highway",label:"With the Protagonist"},
+   {id:"alg-saab",lane:1,direction:"inverted",world:[31,33],viewer:[[24,26],[72,76]],
+    location:"Tallinn highway",label:"Wedged by a seat in the Saab",
+    safeLabel:"Stashed in the strange car"},
+   {id:"alg-sator",lane:1,direction:"inverted",world:[0,31],viewer:[],reconstructed:true,
+    location:"Off screen",label:"To Sator — retrieval never shown (disputed)",
+    safeLabel:"Gone"}],
+  connectors:[{atWorld:33,atViewer:25,from:"alg-tp",to:"alg-saab",kind:"handoff"}]},
+
+ {id:"case",label:"Orange case",group:"objects",lanes:2,segments:[
+   {id:"case-convoy",lane:0,direction:"forward",world:[2,24],viewer:[[4,16]],
+    location:"Armored convoy",label:"In the convoy (241 inside)"},
+   {id:"case-tp",lane:0,direction:"forward",world:[24,32],viewer:[[16,23]],
+    location:"Tallinn highway",label:"With TP — emptied"},
+   {id:"case-inv",lane:1,direction:"inverted",world:[12,32],viewer:[[23,34],[66,72]],
+    location:"Tallinn highway",label:"Carried backward — found empty · later bugged",
+    safeLabel:"Thrown to Sator's car"}],
+  connectors:[{atWorld:32,atViewer:23,from:"case-tp",to:"case-inv",kind:"handoff"}]},
+
+ {id:"bmw",label:"BMW (Neil)",group:"vehicles",lanes:1,segments:[
+   {id:"bmw-run",lane:0,direction:"forward",world:[15,48],viewer:[[4,34]],
+    location:"Tallinn highway",label:"Forward pursuit car"}],
+  connectors:[]},
+
+ {id:"saab",label:"Saab",group:"vehicles",lanes:2,segments:[
+   {id:"saab-wreck",lane:0,direction:"static",world:[8,30],viewer:[[16,20],[88,94]],
+    location:"Highway median",label:"Flipped wreck on the median"},
+   {id:"saab-drive",lane:1,direction:"inverted",world:[30,64],viewer:[[16,34],[62,88]],
+    location:"Tallinn highway",label:"Inverted — driven by TP",
+    safeLabel:"Unknown inverted car"}],
+  connectors:[]},
+
+ {id:"audi",label:"Audi (Sator · Kat)",group:"vehicles",lanes:1,segments:[
+   {id:"audi-run",lane:0,direction:"inverted",world:[10,48],viewer:[[16,34],[62,88]],
+    location:"Tallinn highway",label:"Inverted · carries forward Kat",
+    safeLabel:"Backwards-running car"}],
+  connectors:[]},
+
+ {id:"zone-loc",label:"Location",group:"zones",lanes:1,segments:[
+   {id:"z-ship",lane:0,direction:"static",world:[0,10],viewer:[[94,100]],
+    location:"",label:"◂ to Oslo (placeholder)"},
+   {id:"z-hwy",lane:0,direction:"static",world:[10,48],viewer:[[4,34]],
+    location:"",label:"Tallinn highway"},
+   {id:"z-wh",lane:0,direction:"static",world:[48,68],viewer:[[34,62]],
+    location:"",label:"Freeport warehouse"}],
+  connectors:[]},
+
+ {id:"zone-rooms",label:"Turnstile rooms",group:"zones",lanes:3,segments:[
+   {id:"z-red",lane:0,direction:"forward",world:[50,66],viewer:[[36,62]],
+    location:"",label:"Red room — forward side"},
+   {id:"z-turn",lane:1,direction:"turnstile",world:[50,66],viewer:[[36,62]],
+    location:"",label:"Turnstile"},
+   {id:"z-blue",lane:2,direction:"inverted",world:[50,66],viewer:[[36,62]],
+    location:"",label:"Blue room — inverted side"}],
+  connectors:[]}
+],
+
+events:[
+ {id:"ev-heist",world:16,viewer:8,title:"Convoy heist begins",location:"Tallinn highway",
+  present:["protagonist","neil"],inverted:[],
+  knows:"A fire-truck crew boxes in an armored convoy. The Protagonist boards the truck to steal what he believes is weapons-grade plutonium.",
+  actual:"The cargo is the 241 — the last piece of the Algorithm. Everything on this highway over the next stretch happens twice at once.",
+  interp:"Positions are abstract; the heist choreography is compressed to one beat."},
+
+ {id:"ev-case-grab",world:24,viewer:14,title:"The orange case is taken",location:"Tallinn highway",
+  present:["protagonist","neil"],inverted:[],
+  knows:"The Protagonist has the case and jumps to the escape car Neil brings alongside.",
+  actual:"The case now carries the 241. Two inverted travelers are already on this road, moving the other way through the same minutes.",
+  interp:null},
+
+ {id:"ev-uncrash",world:30,viewer:20,title:"A wrecked car rights itself",location:"Tallinn highway",
+  present:["protagonist","neil"],inverted:["saab-driver"],
+  knows:"A flipped wreck on the median suddenly un-crashes and joins the chase, driving in reverse. Nobody explains it.",
+  actual:"Seen forward, this is a crash playing out backward: the inverted Saab's collision, which its driver has not yet experienced. The driver is the Protagonist himself, inverted, arriving from later this same hour.",
+  interp:"That the un-crashing car is TP's Saab is the film's own later reveal; the exact crash moment is placed here for legibility."},
+
+ {id:"ev-standoff",world:31,viewer:22,title:"Masked man holds Kat at gunpoint",location:"Tallinn highway",
+  present:["protagonist","neil","kat","sator"],inverted:["sator"],
+  knows:"A backwards-running Audi joins the chase. In the back, a man in a respirator — Sator — has a gun to Kat's head and demands the case. His voice sounds wrong.",
+  actual:"The Audi, its driver, and Sator are all inverted, living this chase from end to start; only Kat inside is forward, which is why she is bound and maskless. Sator already knows how this chase ends — for him it has already happened.",
+  interp:"How forward-moving Kat got into the inverted Audi before the chase is never shown; fan diagrams differ on it."},
+
+ {id:"ev-case-toss",world:32,viewer:23,title:"The case goes to the Audi",location:"Tallinn highway",
+  present:["protagonist","kat","sator"],inverted:["sator"],
+  knows:"To save Kat, the Protagonist throws the orange case across — it glances off the strange car's windshield into Sator's hands. Sator seems to have won.",
+  actual:"The case is a decoy — the Protagonist has already palmed the 241 out of it. From here the empty case travels backward with its inverted captors; the inverted Protagonist will later find it by the roadside and hide an earpiece in its foam to bug Sator.",
+  interp:"The case's route from Sator's hands to the roadside is compressed on this board."},
+
+ {id:"ev-stash",world:33,viewer:25,title:"The 241 is hidden",location:"Tallinn highway",
+  present:["protagonist"],inverted:["saab-driver"],
+  knows:"The Protagonist covertly throws the 241 into the passing backward car, where it wedges beside a seat — hidden where Sator can't reach.",
+  actual:"He has just tossed the Algorithm piece into his own inverted self's car. From here the 241's worldline runs backward — the amber bar folds at this event — and Sator, watching from the Audi, sees exactly where it went.",
+  interp:"The script has it wedge by a seat; many fan retellings say the door. Watching the object track fold back here is the point of drawing objects at all."},
+
+ {id:"ev-capture",world:44,viewer:33,title:"Taken to the freeport",location:"Tallinn → warehouse",
+  present:["protagonist","kat","sator"],inverted:[],
+  knows:"Sator's men capture the Protagonist after the chase and drive him to a freeport warehouse. Kat is brought in too.",
+  actual:"Forward Sator still does not know where the 241 is. The interrogation that follows is how he finds out — from both directions at once.",
+  interp:"Whether Neil evades capture here or is taken and freed later is reconstructed, not shown; this dataset has him evade."},
+
+ {id:"ev-interrogation",world:54,viewer:40,title:"Interrogation across the glass",location:"Freeport warehouse",
+  present:["protagonist","kat","sator"],inverted:["sator"],
+  knows:"The Protagonist is held in a red-lit room. Beyond the glass, in blue light, Sator drags Kat in — backwards — and questions him through eerie, reversed-sounding recordings.",
+  actual:"The Protagonist is on the forward (red) side; the Sator beyond the glass is inverted, living the scene backward, with forward Kat in a respirator because the blue side's air runs the wrong way for her. Two Sators are in the building: this one, and the forward one still listening on an earpiece.",
+  interp:"Red = forward, blue = inverted is the film's own coding; the full both-directions staging is assembled from the script and reconstructions."},
+
+ {id:"ev-kat-shot",world:58,viewer:46,title:"Kat is shot",location:"Freeport warehouse",
+  present:["protagonist","kat","sator"],inverted:["sator"],
+  knows:"Before the Protagonist can answer anything, Sator shoots Kat through the glass. Then a second Sator bursts in — forward, in person — demanding the location.",
+  actual:"The round is inverted: it was already lodged in the glass, and it rips backward through Kat on its way to Sator's gun. An inverted wound in a forward body cannot be treated by forward medicine. Kat is shot before the Protagonist gives anyone anything — a fact Sator will later regret from the Audi.",
+  interp:"The shot's world-time placement relative to the two interrogations is the trickiest ordering in the scene; this board follows the script's staging."},
+
+ {id:"ev-raid",world:61,viewer:52,title:"Tenet unit storms the warehouse",location:"Freeport warehouse",
+  present:["protagonist","neil","kat"],inverted:[],
+  knows:"Soldiers led by Ives break in and free the Protagonist. Sator is gone. Kat is dying.",
+  actual:"Neil brought them. The unit seizes the turnstile — which is the only tool that can save Kat and the only way to chase the 241 into the past.",
+  interp:"Ives' unit shadowing the operation is lightly explained in the film; timing here is approximate."},
+
+ {id:"ev-sator-inverts",world:64,viewer:50,title:"Both Sators jump into the turnstile",location:"Freeport warehouse",
+  present:["protagonist","sator"],inverted:[],
+  knows:"Cornered by the raid, the Protagonist shouts that the 241 is in the BMW's glove box. Sator vanishes into the machine — and so, impossibly, does the other Sator on the far side.",
+  actual:"The glove-box answer is a lie. Forward Sator enters the red door and exits the blue side inverted: every backwards-Sator on this board — the far side of the glass, the respirator in the Audi — is this one man, now traveling toward the start of the sequence. He will check the BMW's glove box on the way and find nothing.",
+  interp:"Where Sator re-inverts afterward — to rejoin forward life and collect the 241 — is entirely off screen; reconstructions usually guess this same turnstile at an earlier world time."},
+
+ {id:"ev-tp-inverts",world:65,viewer:58,title:"The Protagonist inverts",location:"Freeport warehouse",
+  present:["protagonist","neil","kat"],inverted:[],
+  knows:"To chase the 241 — and to buy Kat time — the Protagonist walks into the machine. The world outside the glass starts running backward.",
+  actual:"From here his subjective time runs right-to-left on this board. Birds fly backward; fire will feel like ice; the chase he just survived is now in front of him.",
+  interp:null},
+
+ {id:"ev-inv-chase",world:38,viewer:70,title:"The chase, again — backward",location:"Tallinn highway",
+  present:["protagonist","kat","sator"],inverted:["protagonist","sator"],
+  knows:"The same highway, the same cars — the Protagonist found the Saab parked in the freeport yard, keys on the front tire, and now the first pass replays inside out as he follows the case's tracker back into the chase.",
+  actual:"Both passes are one set of world events. Every unexplained thing from the first pass — the un-crashing wreck, the wrong-sounding radio — is this pass, seen from the other side.",
+  interp:null},
+
+ {id:"ev-241-lost",world:31,viewer:78,title:"Sator sees the hand-off",location:"Tallinn highway",
+  present:["protagonist","kat","sator"],inverted:["protagonist","sator"],
+  knows:"Riding the Audi backward through the standoff, Sator watches the 241 leap from the Saab into the forward Protagonist's hand — and realizes he made himself shoot Kat for nothing.",
+  actual:"This is the same seconds of world time as the stash at movie-order 25, seen from the other side. Sator now knows the 241 is in the Saab; the Protagonist's attempt to reach it first has already failed. What's happened, happened.",
+  interp:"How and when Sator physically retrieves the 241 is never shown — the inverted Protagonist's own search of the parked Saab found nothing, which fan reconstructions cannot fully reconcile. This board marks the retrieval as off screen and disputed."},
+
+ {id:"ev-crash",world:28,viewer:84,title:"Crash — and inverted fire",location:"Tallinn highway",
+  present:["protagonist","sator"],inverted:["protagonist","sator"],
+  knows:"The Audi clips the Saab; it rolls and lands on its roof. Sator drops a lighter into the pooling fuel — and the trapped Protagonist starts freezing.",
+  actual:"This is the wreck the forward pass drove past at the start. For an inverted body, heat transfer runs the wrong way: a gasoline fire reads as lethal cold. The flipped wreck now sits on the median across the world-earlier minutes, waiting to 'un-crash' on cue.",
+  interp:"When the fire burns on the world clock is glossed differently across sources; the hypothermia mechanic is the film's own."},
+
+ {id:"ev-rescue",world:18,viewer:90,title:"Pulled from the wreck",location:"Tallinn highway",
+  present:["protagonist","neil","kat"],inverted:["protagonist","neil","kat"],
+  knows:"Ives' people cut the frozen Protagonist out of the wreck — a clean-up the film only refers to afterward. Neil is there, inverted now, with Kat: stable, but only for as long as she stays inverted.",
+  actual:"In world order this rescue happens before the chase begins: the inverted party is living leftward across the board. Kat's inverted-round wound can only be arrested by keeping her inverted — forward time would kill her.",
+  interp:"The rescue's world-time placement (before the heist even starts) is inferred from the wreck already sitting on the median in the first pass."},
+
+ {id:"ev-to-oslo",world:8,viewer:97,title:"The long way back",location:"Toward the ship",
+  present:["protagonist","neil","kat"],inverted:["protagonist","neil","kat"],
+  knows:"The three ship out in an inverted container — headed days backward, toward the Oslo freeport and a door the Protagonist has already fought at.",
+  actual:"Placeholder: this connects Tallinn to the Oslo airport revisit — a separate scene sheet in a fuller version.",
+  interp:"Marked as a placeholder edge; not modeled here."}
+]
+};
+
+/* character display names for chips */
+const NAMES={protagonist:"Protagonist",neil:"Neil",kat:"Kat",sator:"Sator","saab-driver":"Saab driver"};
+
+/* ================= STATE ================= */
+const S={
+  mode:"viewer",          // viewer | world
+  p:16,                   // playhead position on active axis
+  playing:false,
+  spoilers:false,
+  show:{characters:true,objects:true,vehicles:true,zones:true,labels:true}
+};
+
+/* ================= LAYOUT CONSTANTS ================= */
+const X0=170,X1=985,W=X1-X0;           // plot x-range in viewBox units
+const LANE_H=17,LANE_GAP=5,ROW_PAD=10;
+const RULER_H=44,GROUP_H=18;
+const xOf=t=>X0+(t/100)*W;
+const tOf=x=>Math.max(0,Math.min(100,(x-X0)/W*100));
+
+const GROUP_ORDER=["characters","objects","vehicles","zones"];
+const GROUP_LABEL={characters:"CHARACTERS",objects:"OBJECTS",vehicles:"VEHICLES",zones:"ZONES"};
+
+const dirColor=d=>d==="forward"?"var(--fwd)":d==="inverted"?"var(--inv)":
+                 d==="turnstile"?"var(--turn)":"var(--static)";
+
+/* ================= RENDER ================= */
+const stage=document.getElementById("stage");
+let SVG=null, rowIndex=[];   // rowIndex: {track, y, h}
+
+function visibleTracks(){
+  return DATA.tracks.filter(t=>S.show[t.group]);
+}
+
+function segLabel(seg){
+  if(!S.spoilers && seg.safeLabel) return seg.safeLabel;
+  return seg.label;
+}
+
+/* positions of one segment in the CURRENT mode → list of [x,width,ghost] */
+function segWindows(seg){
+  if(S.mode==="world"){
+    return [[xOf(seg.world[0]), xOf(seg.world[1])-xOf(seg.world[0]), !!seg.reconstructed]];
+  }
+  return seg.viewer.map(w=>[xOf(w[0]), xOf(w[1])-xOf(w[0]), false]);
+}
+/* max instances a segment ever needs (so DOM count is stable across modes) */
+const maxInst=seg=>Math.max(1,seg.viewer.length);
+
+function chevrons(w,dir){
+  if(dir==="static"||dir==="turnstile"||w<26) return "";
+  const step=15,n=Math.floor((w-12)/step);
+  let d="";
+  for(let i=0;i<n;i++){
+    const cx=8+i*step+(dir==="inverted"?5:0);
+    d+=dir==="forward"
+      ? `M${cx} 4 L${cx+5} ${LANE_H/2} L${cx} ${LANE_H-4} `
+      : `M${cx} 4 L${cx-5} ${LANE_H/2} L${cx} ${LANE_H-4} `;
+  }
+  return `<path d="${d}" stroke="#0B0E14" stroke-opacity=".38" fill="none" stroke-width="1.4"/>`;
+}
+
+function build(){
+  const tracks=visibleTracks();
+  rowIndex=[];
+  let y=RULER_H;
+  let body="";
+
+  /* ---- ruler ---- */
+  let ruler=`<text class="axisnote" x="${X0}" y="12">${
+    S.mode==="viewer"
+      ? "MOVIE ORDER — the sequence as the audience receives it; the same highway appears twice"
+      : "WORLD ORDER — objective local time; both directions of travel drawn on one axis"}</text>`;
+  for(let t=0;t<=100;t+=10){
+    ruler+=`<g class="tick"><line x1="${xOf(t)}" x2="${xOf(t)}" y1="22" y2="28"/>
+      <text x="${xOf(t)}" y="38" text-anchor="middle">${t}</text></g>`;
+  }
+  /* event diamonds */
+  let evs="";
+  for(const ev of DATA.events){
+    const px=xOf(S.mode==="viewer"?ev.viewer:ev.world);
+    evs+=`<g class="evd" data-ev="${ev.id}" transform="translate(${px},25)">
+      <polygon points="0,-6 6,0 0,6 -6,0"></polygon>
+      <rect x="-8" y="-9" width="16" height="18" fill="transparent"></rect></g>`;
+  }
+
+  /* ---- rows ---- */
+  let lastGroup=null;
+  for(const tr of tracks){
+    if(tr.group!==lastGroup){
+      body+=`<text class="grouphead" x="14" y="${y+GROUP_H-5}">${GROUP_LABEL[tr.group]}</text>`;
+      y+=GROUP_H; lastGroup=tr.group;
+    }
+    const h=ROW_PAD+tr.lanes*(LANE_H+LANE_GAP)+ROW_PAD-LANE_GAP;
+    rowIndex.push({track:tr,y,h});
+    body+=`<line class="rowline" x1="0" x2="${X1+10}" y1="${y+h}" y2="${y+h}"/>`;
+    body+=`<text class="trackname" x="14" y="${y+16}">${tr.label}</text>`;
+    if(tr.lanes>1 && tr.group==="characters")
+      body+=`<text class="tracksub" x="14" y="${y+28}">fwd + inv copies</text>`;
+
+    for(const seg of tr.segments){
+      const laneY=y+ROW_PAD+seg.lane*(LANE_H+LANE_GAP);
+      const wins=segWindows(seg);
+      const color=dirColor(seg.direction);
+      for(let i=0;i<maxInst(seg);i++){
+        const w=wins[i]||null;
+        const pos = w || [xOf(seg.world[0]),xOf(seg.world[1])-xOf(seg.world[0]),true];
+        const ghost = S.mode==="world" ? !!seg.reconstructed : false;
+        const hide  = (S.mode==="viewer" && !wins[i]) ||   // off camera in viewer
+                      (S.mode==="world" && i>0);           // clones stack → draw once
+        const op = hide?0:(ghost?0.4:1);
+        const dash = ghost?`stroke-dasharray="4 3"`:"";
+        const zone = tr.group==="zones";
+        const fillOp = zone?0.16:(ghost?0.12:(seg.direction==="static"?0.28:0.85));
+        const wRect = Math.max(pos[1],3);
+        const clipId = `clip-${seg.id}-${i}`;
+        // DAW-style clip name: inside the bar, clipped, skipped when too narrow
+        const showLabel = S.show.labels && wRect>=40 && !hide;
+        const labelFill = zone ? "var(--ink)"
+                        : ghost||seg.direction==="static" ? "var(--muted)"
+                        : "#0B0E14";
+        body+=`<g class="seg" data-seg="${seg.id}" data-i="${i}">
+          <clipPath id="${clipId}"><rect x="${pos[0]}" y="${laneY}" width="${wRect}" height="${LANE_H}" rx="4"/></clipPath>
+          <rect x="${pos[0]}" y="${laneY}" width="${wRect}" height="${LANE_H}"
+            rx="4" fill="${color}" fill-opacity="${fillOp}"
+            stroke="${color}" stroke-opacity="${zone?0.6:(ghost?0.9:0)}" ${dash}
+            opacity="${op}"><title>${segLabel(seg)}${seg.location?" — "+seg.location:""}</title></rect>
+          <g opacity="${op}" transform="translate(${pos[0]},${laneY})" clip-path="url(#${clipId})">
+            ${!hide&&!zone&&!ghost?chevrons(pos[1],seg.direction):""}
+          </g>
+          ${showLabel?`<text class="cliplabel" clip-path="url(#${clipId})"
+             x="${pos[0]+7}" y="${laneY+LANE_H/2+3.5}" opacity="${op}"
+             fill="${labelFill}" fill-opacity="${zone?0.85:1}">${segLabel(seg)}</text>`:""}
+        </g>`;
+      }
+    }
+    /* connectors */
+    for(const c of tr.connectors||[]){
+      const a=tr.segments.find(s=>s.id===c.from), b=tr.segments.find(s=>s.id===c.to);
+      if(!a||!b) continue;
+      const cx=xOf(S.mode==="viewer"?c.atViewer:c.atWorld);
+      const y1=y+ROW_PAD+a.lane*(LANE_H+LANE_GAP)+LANE_H/2;
+      const y2=y+ROW_PAD+b.lane*(LANE_H+LANE_GAP)+LANE_H/2;
+      const bulge=c.kind==="turnstile"?18:12;
+      // draw only when both endpoints actually meet the connector on the active axis
+      const near=(seg,t)=>S.mode==="world"
+        ? Math.min(Math.abs(seg.world[0]-t),Math.abs(seg.world[1]-t))<=4
+        : seg.viewer.some(w=>Math.min(Math.abs(w[0]-t),Math.abs(w[1]-t))<=4);
+      const at=S.mode==="viewer"?c.atViewer:c.atWorld;
+      const hide=!near(a,at)||!near(b,at);
+      body+=`<path class="conn ${c.kind}" data-cx="${cx}"
+        d="M${cx-4} ${y1} C ${cx+bulge} ${y1}, ${cx+bulge} ${y2}, ${cx-4} ${y2}"
+        opacity="${hide?0:0.9}"/>`;
+      if(c.kind==="turnstile"&&!hide)
+        body+=`<circle cx="${cx+bulge*0.72}" cy="${(y1+y2)/2}" r="2.6" fill="var(--turn)"/>`;
+    }
+    y+=h;
+  }
+
+  const H=y+14;
+  stage.innerHTML=`<svg id="board" viewBox="0 0 1000 ${H}" role="img"
+      aria-label="Multitrack timeline of the Tallinn sequence">
+    ${ruler}${evs}${body}
+    <g id="playhead">
+      <line x1="0" x2="0" y1="18" y2="${H-8}" stroke="var(--ink)" stroke-opacity=".85" stroke-width="1.3"/>
+      <path d="M-6 18 L6 18 L0 27 Z" fill="var(--ink)"/>
+    </g>
+  </svg>`;
+  SVG=document.getElementById("board");
+  SVG.addEventListener("pointerdown",onDrag);
+  SVG.querySelectorAll(".evd").forEach(el=>{
+    el.addEventListener("click",()=>{ jumpToEvent(el.dataset.ev); });
+  });
+  positionPlayhead();
+  updateDetails();
+}
+
+/* ================= PLAYHEAD / SCRUB ================= */
+const scrub=document.getElementById("scrub"), tc=document.getElementById("tc");
+
+function positionPlayhead(){
+  const ph=SVG&&SVG.querySelector("#playhead");
+  if(ph) ph.setAttribute("transform",`translate(${xOf(S.p)},0)`);
+  scrub.value=S.p;
+  scrub.style.setProperty("--fill",S.p+"%");
+  tc.textContent=(S.mode==="viewer"?"MOVIE ":"WORLD ")+"t = "+S.p.toFixed(1).padStart(5," ");
+  /* active segment emphasis */
+  if(!SVG) return;
+  for(const tr of visibleTracks()) for(const seg of tr.segments){
+    const active = S.mode==="world"
+      ? (S.p>=seg.world[0]&&S.p<=seg.world[1])
+      : seg.viewer.some(w=>S.p>=w[0]&&S.p<=w[1]);
+    SVG.querySelectorAll(`[data-seg="${seg.id}"] rect`).forEach(r=>{
+      r.style.filter=active?"brightness(1.25) saturate(1.1)":"";
+      r.style.strokeOpacity=active&&tr.group!=="zones"?0.9:r.getAttribute("stroke-opacity");
+      if(active) r.style.stroke="#fff", r.style.strokeWidth=".8";
+      else{ r.style.stroke=""; r.style.strokeWidth=""; }
+    });
+  }
+}
+
+function setP(v,fromScrub){
+  S.p=Math.max(0,Math.min(100,v));
+  positionPlayhead();
+  updateDetails();
+}
+
+function onDrag(e){
+  const move=ev=>{
+    const pt=new DOMPoint(ev.clientX,ev.clientY).matrixTransform(SVG.getScreenCTM().inverse());
+    setP(tOf(pt.x));
+  };
+  move(e);
+  const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
+  window.addEventListener("pointermove",move);
+  window.addEventListener("pointerup",up);
+}
+scrub.addEventListener("input",()=>setP(parseFloat(scrub.value)));
+
+/* ================= EVENTS / DETAILS ================= */
+const axisPos=ev=>S.mode==="viewer"?ev.viewer:ev.world;
+const sortedEvents=()=>[...DATA.events].sort((a,b)=>axisPos(a)-axisPos(b));
+
+function nearestEvent(){
+  let best=null,bd=1e9;
+  for(const ev of DATA.events){
+    const d=Math.abs(axisPos(ev)-S.p);
+    if(d<bd){bd=d;best=ev;}
+  }
+  return best;
+}
+
+function updateDetails(){
+  const ev=nearestEvent(); if(!ev) return;
+  document.getElementById("ev-title").textContent=ev.title;
+  document.getElementById("ev-meta").textContent=
+    `${ev.location} · movie ${ev.viewer} / world ${ev.world}`;
+  const who=document.getElementById("ev-who"); who.innerHTML="";
+  for(const id of ev.present){
+    const s=document.createElement("span");
+    const inv=ev.inverted.includes(id);
+    s.className=inv?"inv":"fwd";
+    s.textContent=(NAMES[id]||id)+(inv?" ◂inv":" ▸fwd");
+    who.appendChild(s);
+  }
+  /* extra inverted actors not in present (rare) */
+  for(const id of ev.inverted) if(!ev.present.includes(id)){
+    const s=document.createElement("span");s.className="inv";
+    s.textContent=(NAMES[id]||id)+" ◂inv";who.appendChild(s);
+  }
+  document.getElementById("ev-knows").textContent=ev.knows;
+  const act=document.getElementById("ev-actual");
+  if(S.spoilers){act.textContent=ev.actual;act.className="";}
+  else{act.textContent="Hidden — turn on SPOILERS to see the mechanics under this beat.";
+       act.className="hidden-spoiler";}
+  const ih=document.getElementById("ev-interp-head"),it=document.getElementById("ev-interp");
+  if(ev.interp){ih.style.display="";it.style.display="";it.textContent=ev.interp;}
+  else{ih.style.display="none";it.style.display="none";}
+  /* diamond highlight */
+  SVG&&SVG.querySelectorAll(".evd").forEach(el=>
+    el.classList.toggle("active",el.dataset.ev===ev.id));
+}
+
+function jumpToEvent(id){
+  const ev=DATA.events.find(e=>e.id===id); if(!ev)return;
+  setP(axisPos(ev));
+}
+function stepEvent(dir){
+  const evs=sortedEvents();
+  const next = dir>0
+    ? evs.find(e=>axisPos(e)>S.p+0.01)
+    : [...evs].reverse().find(e=>axisPos(e)<S.p-0.01);
+  if(next) setP(axisPos(next));
+}
+document.getElementById("ev-prev").addEventListener("click",()=>stepEvent(-1));
+document.getElementById("ev-next").addEventListener("click",()=>stepEvent(1));
+
+/* ================= MODE & TOGGLES ================= */
+function setMode(m){
+  if(S.mode===m)return;
+  S.mode=m;
+  document.getElementById("mode-viewer").setAttribute("aria-pressed",m==="viewer");
+  document.getElementById("mode-world").setAttribute("aria-pressed",m==="world");
+  build();   // full rebuild; CSS transitions cover the common attrs on rebuildless paths
+}
+document.getElementById("mode-viewer").addEventListener("click",()=>setMode("viewer"));
+document.getElementById("mode-world").addEventListener("click",()=>setMode("world"));
+
+function bindChip(id,key){
+  const el=document.getElementById(id);
+  el.addEventListener("click",()=>{
+    S.show[key]=!S.show[key];
+    el.setAttribute("aria-pressed",S.show[key]);
+    build();
+  });
+}
+bindChip("t-characters","characters");
+bindChip("t-objects","objects");
+bindChip("t-vehicles","vehicles");
+bindChip("t-zones","zones");
+bindChip("t-labels","labels");
+document.getElementById("t-spoilers").addEventListener("click",e=>{
+  S.spoilers=!S.spoilers;
+  e.currentTarget.setAttribute("aria-pressed",S.spoilers);
+  build();
+});
+
+/* ================= TRANSPORT ================= */
+const playBtn=document.getElementById("play");
+let raf=null,lastT=0;
+function tick(ts){
+  if(!S.playing)return;
+  if(lastT){ setP(S.p+ (ts-lastT)/1000*6); if(S.p>=100){togglePlay(false);} }
+  lastT=ts; raf=requestAnimationFrame(tick);
+}
+function togglePlay(force){
+  S.playing=force!==undefined?force:!S.playing;
+  playBtn.textContent=S.playing?"❚❚":"▶";
+  lastT=0;
+  if(S.playing) raf=requestAnimationFrame(tick);
+  else if(raf) cancelAnimationFrame(raf);
+}
+playBtn.addEventListener("click",()=>togglePlay());
+
+/* ================= KEYBOARD ================= */
+window.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"&&e.key!==" ")return;
+  switch(e.key){
+    case "ArrowLeft": setP(S.p-(e.shiftKey?5:1)); e.preventDefault(); break;
+    case "ArrowRight": setP(S.p+(e.shiftKey?5:1)); e.preventDefault(); break;
+    case "[": stepEvent(-1); break;
+    case "]": stepEvent(1); break;
+    case " ": togglePlay(); e.preventDefault(); break;
+    case "m": setMode(S.mode==="viewer"?"world":"viewer"); break;
+    case "s": document.getElementById("t-spoilers").click(); break;
+  }
+});
+
+/* ================= INIT ================= */
+/* URL hash overrides for direct links / headless review: #world #spoilers #t=42 */
+if(location.hash){
+  if(location.hash.includes("world")){S.mode="world";
+    document.getElementById("mode-viewer").setAttribute("aria-pressed","false");
+    document.getElementById("mode-world").setAttribute("aria-pressed","true");}
+  if(location.hash.includes("spoilers")){S.spoilers=true;
+    document.getElementById("t-spoilers").setAttribute("aria-pressed","true");}
+  const m=location.hash.match(/t=([\d.]+)/); if(m) S.p=parseFloat(m[1]);
+}
+build();
+</script>
+</body>
+</html>
