@@ -238,10 +238,18 @@ Verification sources actually consulted for the encoded mechanics (see the
 verification note above):
 
 - ***Tenet* shooting script**, written and directed by **Christopher Nolan**
-  (primary source for staging, vehicle assignments, and dialogue-level facts —
-  paraphrased here, never quoted).
+  (public copy via thescriptsavant.com) — primary source for staging, vehicle
+  assignments, and dialogue-level facts, paraphrased here and never quoted.
 - **thisisbarry.com**, "Tenet Explained (Scene By Scene With Timeline Diagrams)."
 - **2centscritic.com**, *Tenet* spoiler breakdown (red/blue channel coding).
+- **clip.cafe** transcript snippets — spot checks (e.g. the proving-window briefing).
+- One r/tenet detail (Sator's glove-box check of Neil's car) surfaced via a search
+  snippet of a thread that could not be opened directly.
+
+Method note: the first draft was written from general public knowledge of the film
+and fan discussion; every load-bearing mechanic was then verified against the
+script, which corrected four real errors (documented in the verification note
+above). The same source list is shown in the app footer under "Sources & credits."
 
 *Tenet* itself is © Warner Bros. / Syncopy; this is an unaffiliated fan-made
 educational diagram containing no footage, stills, or dialogue.
