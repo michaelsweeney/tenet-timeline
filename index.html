@@ -62,7 +62,10 @@
   #left{min-width:0;display:flex;flex-direction:column;overflow-y:auto}
   #scene{padding:8px 6px 0 12px;border-bottom:1px solid var(--hair)}
   #scene.off{display:none}
-  #scene svg{max-height:400px;margin:0 auto}
+  #scene svg{max-height:600px;margin:0 auto}
+  .scenehead{display:flex;justify-content:space-between;gap:12px;
+    font-family:var(--mono);font-size:10px;color:var(--faint);
+    letter-spacing:.06em;padding:2px 6px 6px}
   #stage{padding:6px 6px 0 12px;overflow-x:auto}
   svg{display:block;width:100%;height:auto}
   .scenenote{font-family:var(--mono);font-size:10px;fill:var(--faint);letter-spacing:.06em}
@@ -209,8 +212,8 @@
     <span>◇ event &nbsp;·&nbsp; keys: ←/→ scrub · [ ] events · space play · m mode · s spoilers</span>
   </div>
   <div class="disclaimer">
-    Abstract units 0–100, not film timestamps. Educational diagram — no footage, stills, or dialogue.
-    Sources: Taylor Holmes timeline infographic · r/tenet relative-age diagram · r/tenet Sator/Kat Tallinn thread · GQ explainer.
+    Abstract units 0–100, not film timestamps. Educational fan diagram — no footage, stills, or dialogue; unaffiliated with Warner Bros./Syncopy.
+    Credits: Taylor Holmes timeline infographic · r/tenet relative-age diagram · r/tenet Sator/Kat Tallinn thread · GQ explainer · mechanics checked against the shooting script (full citations in README).
   </div>
 </footer>
 
@@ -597,14 +600,56 @@ function buildScene(){
   const scene=document.getElementById("scene");
   scene.classList.toggle("off",!S.show.scene);
   if(!S.show.scene){scene.innerHTML="";sceneSVG=null;return;}
-  scene.innerHTML=`<svg id="iso" viewBox="0 0 1000 400" role="img"
+  scene.innerHTML=`<div class="scenehead">
+      <span>SCENE — approximate spatial layout, world state · auto-framed to the action</span>
+      <span id="scene-tc"></span></div>
+    <svg id="iso" viewBox="${CAM.cur.join(" ")}" role="img"
     aria-label="Isometric diorama of the Tallinn sequence">
-    <text class="scenenote" x="12" y="16">SCENE — approximate spatial layout, world state</text>
-    <text class="scenenote" x="988" y="16" text-anchor="end" id="scene-tc"></text>
     ${sceneStatic()}
     <g id="ents"></g></svg>`;
   sceneSVG=document.getElementById("iso");
   updateScene();
+}
+
+/* ---- auto-framing camera: ease the viewBox toward the active entities ---- */
+const FULLVIEW=[0,0,1000,400];
+const CAM={cur:[...FULLVIEW],tgt:[...FULLVIEW],raf:null};
+const REDUCED=matchMedia("(prefers-reduced-motion: reduce)");
+function frameCamera(items){
+  const pts=[];
+  for(const it of items){ if(it.ghost) continue; pts.push(iso(it.x,it.y,0)); }
+  let t;
+  if(!pts.length) t=[...FULLVIEW];
+  else{
+    const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+    const pad=60;
+    let w=Math.max(...xs)-Math.min(...xs)+2*pad,
+        h=Math.max(...ys)-Math.min(...ys)+2*pad+22; // headroom for pins/labels
+    const cx=(Math.max(...xs)+Math.min(...xs))/2,
+          cy=(Math.max(...ys)+Math.min(...ys))/2-8;
+    const AR=FULLVIEW[2]/FULLVIEW[3];
+    if(w/h<AR) w=h*AR; else h=w/AR;
+    if(w<320){w=320;h=w/AR;}                 // max zoom-in
+    if(w>FULLVIEW[2]){w=FULLVIEW[2];h=FULLVIEW[3];}
+    let x=cx-w/2,y=cy-h/2;
+    x=Math.max(-30,Math.min(1030-w,x));
+    y=Math.max(-14,Math.min(414-h,y));
+    t=[x,y,w,h];
+  }
+  CAM.tgt=t;
+  if(REDUCED.matches){CAM.cur=[...t];applyCam();return;}
+  if(!CAM.raf) camTick();
+}
+function applyCam(){ sceneSVG&&sceneSVG.setAttribute("viewBox",CAM.cur.map(v=>v.toFixed(1)).join(" ")); }
+function camTick(){
+  let done=true;
+  for(let i=0;i<4;i++){
+    const d=CAM.tgt[i]-CAM.cur[i];
+    if(Math.abs(d)>0.4){CAM.cur[i]+=d*0.16;done=false;}
+    else CAM.cur[i]=CAM.tgt[i];
+  }
+  applyCam();
+  CAM.raf=done?null:requestAnimationFrame(camTick);
 }
 
 function updateScene(){
@@ -634,6 +679,7 @@ function updateScene(){
     items.push({d:x+y,kind:ex.kind,x,y,color:ex.color,ghost:false});
   }
   items.sort((a,b)=>a.d-b.d);
+  frameCamera(items);
   let out="";
   for(const it of items){
     if(it.kind==="car") out+=isoBox(it.x,it.y,it.flip?24:26,12,it.flip?6:9,it.color,it.ghost);

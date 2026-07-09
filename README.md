@@ -212,14 +212,39 @@ Characters with coexisting forward/inverted copies appear **twice** in the scene
   multiple scenes exist, each segment can carry a `subjectiveAge` offset so the
   details panel can say "this Neil is N days older than the one you saw in Mumbai."
 
-## Sources (interpretive, not canonical)
+## Sources & credits
 
-- Taylor Holmes, "The Definitive Tenet Timeline Infographic" — location/event framing.
-- r/tenet, "Tenet Timelines Diagram with Relative Time / Relative Age" — characters as
-  parallel tracks at different subjective ages.
-- r/tenet, "The Sator/Kat timeline for Tallinn" — the two-Sators reconstruction.
-- GQ, "Tenet Really Explained, For Real This Time" — inversion, turnstiles, pincers,
-  red/blue coding.
+The dataset here is this project's own synthesis; the timeline *ideas* it builds on
+come from the following people and publications. None of them are affiliated with
+this project, and any errors in the encoding are ours, not theirs.
+
+Interpretive frame (the analyses this visualization was commissioned around):
+
+- **Taylor Holmes**, "The Definitive Tenet Timeline Infographic," *taylorholmes.com*
+  (Oct 16 2020) — the location/event framing (Kyiv → Oslo → Tallinn, revisited
+  inverted). <https://taylorholmes.com/2020/10/16/the-definitive-tenet-timeline-infographic/>
+- **r/tenet**, "Tenet Timelines Diagram with Relative Time / Relative Age" — the
+  characters-as-parallel-tracks-at-different-subjective-ages model.
+  <https://www.reddit.com/r/tenet/comments/il97xs/> (author attribution at the thread;
+  the post was unreachable at build time, so the username could not be recorded here —
+  credit belongs to that poster.)
+- **r/tenet**, "The Sator/Kat timeline for Tallinn" — the two-Sators Tallinn
+  reconstruction. <https://www.reddit.com/r/tenet/comments/jyy51i/> (same note as above.)
+- **GQ**, "Tenet Really Explained, For Real This Time" — plain-language inversion /
+  turnstile / pincer / red-blue explainer. <https://www.gq.com/story/tenet-explained>
+  (byline at the article; unreachable at build time.)
+
+Verification sources actually consulted for the encoded mechanics (see the
+verification note above):
+
+- ***Tenet* shooting script**, written and directed by **Christopher Nolan**
+  (primary source for staging, vehicle assignments, and dialogue-level facts —
+  paraphrased here, never quoted).
+- **thisisbarry.com**, "Tenet Explained (Scene By Scene With Timeline Diagrams)."
+- **2centscritic.com**, *Tenet* spoiler breakdown (red/blue channel coding).
+
+*Tenet* itself is © Warner Bros. / Syncopy; this is an unaffiliated fan-made
+educational diagram containing no footage, stills, or dialogue.
 
 ## Screenshots
 
